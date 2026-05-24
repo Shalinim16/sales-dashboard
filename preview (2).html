@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Automation Dashboard</title>
+
+<style>
+body {
+    font-family: 'Segoe UI', sans-serif;
+    margin: 0;
+    background: #eef2f7;
+}
+
+header {
+    background: #1f2937;
+    color: white;
+    padding: 15px;
+    text-align: center;
+}
+
+.container {
+    padding: 20px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.card {
+    background: white;
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+button {
+    padding: 10px;
+    margin: 5px;
+    border: none;
+    border-radius: 6px;
+    background: #3b82f6;
+    color: white;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #2563eb;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+th, td {
+    padding: 8px;
+    border: 1px solid #ddd;
+    text-align: center;
+}
+
+.log {
+    max-height: 150px;
+    overflow-y: auto;
+    font-size: 14px;
+    background: #f9fafb;
+    padding: 10px;
+    border-radius: 6px;
+}
+
+</style>
+</head>
+
+<body>
+
+<header>
+<h1>📊 Data Cleaning & Reporting Dashboard</h1>
+</header>
+
+<div class="container">
+
+<!-- Upload -->
+<div class="card">
+    <h3>Upload Dataset</h3>
+    <input type="file" id="fileInput">
+    <button onclick="loadData()">Load Data</button>
+</div>
+
+<!-- Stats -->
+<div class="grid">
+    <div class="card"><h4>Rows</h4><p id="rows">0</p></div>
+    <div class="card"><h4>Columns</h4><p id="cols">0</p></div>
+    <div class="card"><h4>Missing Values</h4><p id="missing">0</p></div>
+    <div class="card"><h4>Duplicates</h4><p id="duplicates">0</p></div>
+</div>
+
+<!-- Cleaning -->
+<div class="card">
+    <h3>Data Cleaning Actions</h3>
+    <button onclick="removeDuplicates()">Remove Duplicates</button>
+    <button onclick="handleMissing()">Fill Missing</button>
+    <button onclick="normalizeData()">Normalize</button>
+    <button onclick="downloadCSV()">Download Cleaned Data</button>
+</div>
+
+<!-- Table -->
+<div class="card">
+    <h3>Data Preview</h3>
+    <table id="table">
+        <thead></thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<!-- Report -->
+<div class="card">
+    <h3>Report Summary</h3>
+    <button onclick="generateReport()">Generate Report</button>
+    <div id="report"></div>
+</div>
+
+<!-- Logs -->
+<div class="card">
+    <h3>Cleaning Log</h3>
+    <div class="log" id="log"></div>
+</div>
+
+</div>
+
+<script>
+
+let dataset = [];
+
+function log(msg){
+    document.getElementById("log").innerHTML += "✔ " + msg + "<br>";
+}
+
+// Load CSV
+function loadData(){
+    const file = document.getElementById("fileInput").files[0];
+    const reader = new FileReader();
+
+    reader.onload = function(e){
+        dataset = e.target.result.split("\n").map(r => r.split(","));
+        displayTable();
+        updateStats();
+        log("Dataset loaded successfully");
+    }
+
+    reader.readAsText(file);
+}
+
+// Display Table
+function displayTable(){
+    const head = document.querySelector("#table thead");
+    const body = document.querySelector("#table tbody");
+
+    head.innerHTML = "";
+    body.innerHTML = "";
+
+    dataset.forEach((row,i)=>{
+        let tr = document.createElement("tr");
+
+        row.forEach(cell=>{
+            let el = document.createElement(i===0?"th":"td");
+            el.textContent = cell;
+            tr.appendChild(el);
+        });
+
+        if(i===0) head.appendChild(tr);
+        else body.appendChild(tr);
+    });
+}
+
+// Stats
+function updateStats(){
+    let rows = dataset.length-1;
+    let cols = dataset[0].length;
+
+    let missing = 0;
+    dataset.forEach(r=>r.forEach(c=>{ if(c==="") missing++; }));
+
+    let duplicates = dataset.length - new Set(dataset.map(r=>r.join(","))).size;
+
+    document.getElementById("rows").textContent = rows;
+    document.getElementById("cols").textContent = cols;
+    document.getElementById("missing").textContent = missing;
+    document.getElementById("duplicates").textContent = duplicates;
+}
+
+// Cleaning Functions
+function removeDuplicates(){
+    let unique = [];
+    let seen = new Set();
+
+    dataset.forEach(row=>{
+        let key = row.join(",");
+        if(!seen.has(key)){
+            seen.add(key);
+            unique.push(row);
+        }
+    });
+
+    dataset = unique;
+    displayTable();
+    updateStats();
+    log("Duplicates removed");
+}
+
+function handleMissing(){
+    dataset = dataset.map(r=>r.map(c=>c===""?"N/A":c));
+    displayTable();
+    updateStats();
+    log("Missing values handled");
+}
+
+function normalizeData(){
+    dataset = dataset.map(r=>r.map(c=>c.toLowerCase()));
+    displayTable();
+    log("Data normalized");
+}
+
+// Report
+function generateReport(){
+    document.getElementById("report").innerHTML = `
+        <p><strong>✔ Data cleaned successfully</strong></p>
+        <p>✔ Ready for analytics & visualization</p>
+        <p>✔ Automation improved efficiency</p>
+    `;
+    log("Report generated");
+}
+
+// Download CSV
+function downloadCSV(){
+    let csv = dataset.map(r=>r.join(",")).join("\n");
+    let blob = new Blob([csv], {type:'text/csv'});
+    let a = document.createElement("a");
+
+    a.href = URL.createObjectURL(blob);
+    a.download = "cleaned_data.csv";
+    a.click();
+
+    log("Cleaned dataset downloaded");
+}
+
+</script>
+
+</body>
+</html>
