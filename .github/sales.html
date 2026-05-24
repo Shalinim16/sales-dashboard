@@ -1,0 +1,605 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Sales & Revenue Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0f14;
+    --surface: #161920;
+    --surface2: #1e2230;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #e8eaf0;
+    --text2: #8b90a0;
+    --text3: #555b6e;
+    --accent: #4f8ef7;
+    --accent2: #7c5cbf;
+    --green: #3ecf8e;
+    --red: #f06c6c;
+    --amber: #f5a623;
+    --teal: #2dd4bf;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* SIDEBAR */
+  .layout { display: flex; min-height: 100vh; }
+
+  .sidebar {
+    width: 220px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 28px 0;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+  }
+
+  .logo {
+    padding: 0 24px 28px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 20px;
+  }
+  .logo-mark {
+    width: 32px; height: 32px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 600; color: #fff;
+    margin-bottom: 10px;
+  }
+  .logo-name { font-size: 14px; font-weight: 600; color: var(--text); letter-spacing: .01em; }
+  .logo-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  .nav-section { padding: 0 12px; margin-bottom: 6px; }
+  .nav-label { font-size: 10px; font-weight: 600; color: var(--text3); letter-spacing: .08em; text-transform: uppercase; padding: 0 12px; margin-bottom: 6px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: var(--radius-sm);
+    font-size: 13px; color: var(--text2); cursor: pointer;
+    transition: all .15s;
+  }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: rgba(79,142,247,0.15); color: var(--accent); }
+  .nav-icon { font-size: 16px; width: 18px; text-align: center; }
+
+  /* MAIN */
+  .main { margin-left: 220px; flex: 1; padding: 28px 32px; max-width: 1200px; }
+
+  /* TOPBAR */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 28px;
+  }
+  .topbar-left h1 { font-size: 20px; font-weight: 600; color: var(--text); }
+  .topbar-left p { font-size: 13px; color: var(--text2); margin-top: 3px; }
+  .topbar-right { display: flex; gap: 10px; align-items: center; }
+
+  /* BUTTONS */
+  .btn {
+    padding: 8px 16px; border-radius: var(--radius-sm); font-size: 13px;
+    font-family: 'DM Sans', sans-serif; cursor: pointer; border: none;
+    transition: all .15s; display: flex; align-items: center; gap: 6px;
+  }
+  .btn-primary { background: var(--accent); color: #fff; font-weight: 500; }
+  .btn-primary:hover { background: #6ba3ff; }
+  .btn-outline {
+    background: transparent; color: var(--text2);
+    border: 1px solid var(--border2);
+  }
+  .btn-outline:hover { background: var(--surface2); color: var(--text); }
+
+  /* FILTERS */
+  .filters {
+    display: flex; gap: 10px; align-items: center;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px 18px;
+    margin-bottom: 24px; flex-wrap: wrap;
+  }
+  .filter-group { display: flex; align-items: center; gap: 8px; }
+  .filter-group label { font-size: 12px; color: var(--text3); white-space: nowrap; }
+  .filter-group select {
+    background: var(--surface2); border: 1px solid var(--border2);
+    color: var(--text); font-family: 'DM Sans', sans-serif;
+    font-size: 12px; padding: 6px 10px; border-radius: var(--radius-sm);
+    cursor: pointer; outline: none;
+  }
+  .filter-group select:focus { border-color: var(--accent); }
+  .filter-divider { width: 1px; height: 24px; background: var(--border); margin: 0 4px; }
+
+  /* UPLOAD */
+  .upload-zone {
+    border: 1.5px dashed var(--border2); border-radius: var(--radius);
+    padding: 16px 20px; display: flex; align-items: center; gap: 14px;
+    margin-bottom: 24px; cursor: pointer; transition: all .2s;
+    background: rgba(79,142,247,0.03);
+  }
+  .upload-zone:hover { border-color: var(--accent); background: rgba(79,142,247,0.07); }
+  .upload-icon { font-size: 22px; color: var(--accent); }
+  .upload-text { flex: 1; }
+  .upload-title { font-size: 13px; font-weight: 500; color: var(--text); }
+  .upload-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .badge {
+    font-size: 11px; font-weight: 500; padding: 3px 10px;
+    border-radius: 20px; white-space: nowrap;
+  }
+  .badge-blue { background: rgba(79,142,247,0.15); color: var(--accent); }
+  .badge-green { background: rgba(62,207,142,0.15); color: var(--green); }
+
+  /* KPI GRID */
+  .kpi-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 14px; margin-bottom: 24px;
+  }
+  .kpi-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px 20px;
+    transition: border-color .2s;
+  }
+  .kpi-card:hover { border-color: var(--border2); }
+  .kpi-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .kpi-label { font-size: 12px; color: var(--text2); }
+  .kpi-icon {
+    width: 30px; height: 30px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center; font-size: 15px;
+  }
+  .kpi-val { font-size: 24px; font-weight: 600; color: var(--text); font-family: 'DM Mono', monospace; }
+  .kpi-delta { font-size: 12px; margin-top: 6px; display: flex; align-items: center; gap: 4px; }
+  .delta-up { color: var(--green); }
+  .delta-down { color: var(--red); }
+
+  /* CHART GRID */
+  .chart-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .chart-grid-bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px;
+  }
+  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  .card-title { font-size: 14px; font-weight: 500; color: var(--text); }
+  .card-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
+
+  /* LEGEND */
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; }
+  .leg-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); }
+  .leg-dot { width: 8px; height: 8px; border-radius: 2px; }
+
+  /* PRODUCT TABLE */
+  .prod-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .prod-table th {
+    text-align: left; font-size: 11px; font-weight: 500;
+    color: var(--text3); text-transform: uppercase; letter-spacing: .06em;
+    padding: 0 0 10px; border-bottom: 1px solid var(--border);
+  }
+  .prod-table td { padding: 10px 0; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; }
+  .prod-table tr:last-child td { border-bottom: none; }
+  .prod-name { font-size: 13px; }
+  .prod-cat { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .bar-bg { background: var(--surface2); border-radius: 3px; height: 5px; width: 80px; }
+  .bar-fill { height: 5px; border-radius: 3px; background: var(--accent); }
+  .rank { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text3); width: 24px; }
+
+  /* TOAST */
+  #toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--surface2); border: 1px solid var(--border2);
+    border-radius: var(--radius-sm); padding: 12px 18px;
+    font-size: 13px; color: var(--text); display: none;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4); z-index: 999;
+    animation: slideUp .2s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-mark">S</div>
+      <div class="logo-name">SalesIQ</div>
+      <div class="logo-sub">Revenue Analytics</div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-label">Analytics</div>
+      <div class="nav-item active">
+        <span class="nav-icon">📊</span> Overview
+      </div>
+      <div class="nav-item" onclick="showToast('Revenue page coming soon')">
+        <span class="nav-icon">💰</span> Revenue
+      </div>
+      <div class="nav-item" onclick="showToast('Products page coming soon')">
+        <span class="nav-icon">📦</span> Products
+      </div>
+      <div class="nav-item" onclick="showToast('Customers page coming soon')">
+        <span class="nav-icon">👥</span> Customers
+      </div>
+    </div>
+
+    <div class="nav-section" style="margin-top:16px;">
+      <div class="nav-label">Reports</div>
+      <div class="nav-item" onclick="showToast('Regional report coming soon')">
+        <span class="nav-icon">🗺️</span> By Region
+      </div>
+      <div class="nav-item" onclick="showToast('Category report coming soon')">
+        <span class="nav-icon">🏷️</span> By Category
+      </div>
+    </div>
+
+    <div style="margin-top:auto; padding: 0 12px;">
+      <div class="nav-item" onclick="showToast('Settings coming soon')">
+        <span class="nav-icon">⚙️</span> Settings
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <h1>Sales Overview</h1>
+        <p id="dateRange">Jan 2024 — Dec 2024 &nbsp;·&nbsp; All Regions &nbsp;·&nbsp; All Categories</p>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-outline" onclick="exportCSV()">⬇ Export CSV</button>
+        <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">⬆ Import Data</button>
+      </div>
+    </div>
+
+    <!-- UPLOAD ZONE -->
+    <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+      <div class="upload-icon">📂</div>
+      <div class="upload-text">
+        <div class="upload-title">Import your sales data</div>
+        <div class="upload-sub">Upload a CSV with columns: month, revenue, orders, category, region — dashboard updates instantly</div>
+      </div>
+      <span class="badge badge-blue" id="uploadBadge">Demo data active</span>
+      <input type="file" id="fileInput" accept=".csv" style="display:none" onchange="handleCSV(event)">
+    </div>
+
+    <!-- FILTERS -->
+    <div class="filters">
+      <div class="filter-group">
+        <label>Period</label>
+        <select id="periodFilter" onchange="applyFilters()">
+          <option value="12">Last 12 months</option>
+          <option value="6">Last 6 months</option>
+          <option value="3">Last 3 months</option>
+        </select>
+      </div>
+      <div class="filter-divider"></div>
+      <div class="filter-group">
+        <label>Region</label>
+        <select id="regionFilter" onchange="applyFilters()">
+          <option value="all">All Regions</option>
+          <option value="North">North</option>
+          <option value="South">South</option>
+          <option value="East">East</option>
+          <option value="West">West</option>
+        </select>
+      </div>
+      <div class="filter-divider"></div>
+      <div class="filter-group">
+        <label>Category</label>
+        <select id="categoryFilter" onchange="applyFilters()">
+          <option value="all">All Categories</option>
+          <option value="Electronics">Electronics</option>
+          <option value="Apparel">Apparel</option>
+          <option value="Home">Home</option>
+          <option value="Sports">Sports</option>
+        </select>
+      </div>
+      <div class="filter-divider"></div>
+      <div class="filter-group">
+        <label>Chart type</label>
+        <select id="chartType" onchange="toggleChartType()">
+          <option value="line">Line</option>
+          <option value="bar">Bar</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- KPI CARDS -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-label">Total Revenue</span>
+          <div class="kpi-icon" style="background:rgba(79,142,247,0.15);">💰</div>
+        </div>
+        <div class="kpi-val" id="kpiRevenue">$2.84M</div>
+        <div class="kpi-delta delta-up" id="kpiRevDelta">▲ +14.2% vs prior period</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-label">Total Orders</span>
+          <div class="kpi-icon" style="background:rgba(62,207,142,0.15);">🛒</div>
+        </div>
+        <div class="kpi-val" id="kpiOrders">18,420</div>
+        <div class="kpi-delta delta-up" id="kpiOrdDelta">▲ +8.5% vs prior period</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-label">Avg. Order Value</span>
+          <div class="kpi-icon" style="background:rgba(245,166,35,0.15);">📈</div>
+        </div>
+        <div class="kpi-val" id="kpiAOV">$154</div>
+        <div class="kpi-delta delta-up" id="kpiAovDelta">▲ +5.1% vs prior period</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-header">
+          <span class="kpi-label">Unique Customers</span>
+          <div class="kpi-icon" style="background:rgba(124,92,191,0.15);">👥</div>
+        </div>
+        <div class="kpi-val" id="kpiCustomers">9,312</div>
+        <div class="kpi-delta delta-down" id="kpiCustDelta">▼ -2.1% vs prior period</div>
+      </div>
+    </div>
+
+    <!-- TREND + DONUT -->
+    <div class="chart-grid">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Monthly Revenue Trend</div>
+            <div class="card-sub">Revenue vs Target</div>
+          </div>
+          <div class="legend">
+            <div class="leg-item"><div class="leg-dot" style="background:#4f8ef7;"></div>Revenue</div>
+            <div class="leg-item"><div class="leg-dot" style="background:#3ecf8e; border:1.5px dashed #3ecf8e; background:transparent;"></div>Target</div>
+          </div>
+        </div>
+        <div style="position:relative; height:240px;">
+          <canvas id="trendChart"></canvas>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">By Category</div>
+            <div class="card-sub">Revenue share</div>
+          </div>
+        </div>
+        <div id="catLegend" class="legend" style="margin-bottom:12px;"></div>
+        <div style="position:relative; height:200px;">
+          <canvas id="catChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- PRODUCTS + REGION -->
+    <div class="chart-grid-bottom">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Top Products by Revenue</div>
+        </div>
+        <table class="prod-table">
+          <thead>
+            <tr>
+              <th>#</th><th>Product</th><th style="text-align:right;">Revenue</th><th style="text-align:right;">Share</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="productTable"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Sales by Region</div>
+        </div>
+        <div style="position:relative; height:260px;">
+          <canvas id="regionChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align:center; font-size:12px; color:var(--text3); padding:16px 0 8px;">
+      SalesIQ Dashboard &nbsp;·&nbsp; Built with Chart.js &nbsp;·&nbsp; Data updates on CSV import
+    </div>
+
+  </main>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const COLORS = ['#4f8ef7','#3ecf8e','#f5a623','#7c5cbf','#f06c6c','#2dd4bf'];
+
+const DEMO = {
+  months: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+  revenue: [210,195,230,245,220,260,280,295,270,310,290,325],
+  target:  [200,210,220,230,240,250,260,270,280,290,300,310],
+  categories: { Electronics:38, Apparel:27, Home:20, Sports:15 },
+  regions: { North:820, South:690, East:750, West:580 },
+  products: [
+    { name:'Wireless Earbuds Pro', cat:'Electronics', rev:420, share:14.8 },
+    { name:'Smart Home Hub',       cat:'Electronics', rev:310, share:10.9 },
+    { name:'Running Shoes X',      cat:'Sports',      rev:285, share:10.0 },
+    { name:'Laptop Stand',         cat:'Home',        rev:240, share:8.5  },
+    { name:'Yoga Mat Elite',       cat:'Sports',      rev:195, share:6.9  },
+  ]
+};
+
+let trendChart, catChart, regionChart;
+
+function buildProductTable(products) {
+  const max = products[0].rev;
+  document.getElementById('productTable').innerHTML = products.map((p,i) => `
+    <tr>
+      <td class="rank">${i+1}</td>
+      <td><div class="prod-name">${p.name}</div><div class="prod-cat">${p.cat}</div></td>
+      <td style="text-align:right; font-family:'DM Mono',monospace; font-size:13px;">$${p.rev}K</td>
+      <td style="text-align:right; color:var(--text2); font-size:12px;">${p.share}%</td>
+      <td style="padding-left:12px; min-width:80px;">
+        <div class="bar-bg"><div class="bar-fill" style="width:${Math.round(p.rev/max*100)}%"></div></div>
+      </td>
+    </tr>`).join('');
+}
+
+function buildCatLegend(cats) {
+  const total = Object.values(cats).reduce((a,b)=>a+b,0);
+  document.getElementById('catLegend').innerHTML = Object.entries(cats).map(([k,v],i)=>
+    `<div class="leg-item"><div class="leg-dot" style="background:${COLORS[i]};"></div>${k} ${Math.round(v/total*100)}%</div>`
+  ).join('');
+}
+
+function initCharts() {
+  buildProductTable(DEMO.products);
+  buildCatLegend(DEMO.categories);
+
+  trendChart = new Chart(document.getElementById('trendChart'), {
+    type: 'line',
+    data: {
+      labels: DEMO.months,
+      datasets: [
+        {
+          label: 'Revenue', data: DEMO.revenue,
+          borderColor: '#4f8ef7', backgroundColor: 'rgba(79,142,247,0.1)',
+          tension: 0.4, fill: true, pointRadius: 4,
+          pointBackgroundColor: '#4f8ef7', borderWidth: 2
+        },
+        {
+          label: 'Target', data: DEMO.target,
+          borderColor: '#3ecf8e', borderDash: [5,4],
+          tension: 0, fill: false, pointRadius: 0, borderWidth: 1.5
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { mode:'index', intersect:false, backgroundColor:'#1e2230', borderColor:'rgba(255,255,255,0.1)', borderWidth:1, titleColor:'#e8eaf0', bodyColor:'#8b90a0' } },
+      scales: {
+        x: { grid: { color:'rgba(255,255,255,0.05)' }, ticks: { color:'#555b6e', font:{size:11} } },
+        y: { grid: { color:'rgba(255,255,255,0.05)' }, ticks: { color:'#555b6e', font:{size:11}, callback: v=>'$'+v+'K' } }
+      }
+    }
+  });
+
+  catChart = new Chart(document.getElementById('catChart'), {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(DEMO.categories),
+      datasets: [{ data: Object.values(DEMO.categories), backgroundColor: COLORS, borderWidth: 2, borderColor: '#161920' }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '65%',
+      plugins: { legend: { display:false }, tooltip: { backgroundColor:'#1e2230', borderColor:'rgba(255,255,255,0.1)', borderWidth:1, titleColor:'#e8eaf0', bodyColor:'#8b90a0', callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed}%` } } }
+    }
+  });
+
+  regionChart = new Chart(document.getElementById('regionChart'), {
+    type: 'bar',
+    data: {
+      labels: Object.keys(DEMO.regions),
+      datasets: [{ label:'Sales ($K)', data: Object.values(DEMO.regions), backgroundColor: COLORS, borderRadius: 5, borderSkipped: false }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display:false }, tooltip: { backgroundColor:'#1e2230', borderColor:'rgba(255,255,255,0.1)', borderWidth:1, titleColor:'#e8eaf0', bodyColor:'#8b90a0', callbacks: { label: ctx => ` $${ctx.parsed.x}K` } } },
+      scales: {
+        x: { grid: { color:'rgba(255,255,255,0.05)' }, ticks: { color:'#555b6e', font:{size:11}, callback: v=>'$'+v+'K' } },
+        y: { grid: { display:false }, ticks: { color:'#8b90a0', font:{size:13} } }
+      }
+    }
+  });
+}
+
+function applyFilters() {
+  const months = parseInt(document.getElementById('periodFilter').value);
+  const region = document.getElementById('regionFilter').value;
+  const cat = document.getElementById('categoryFilter').value;
+  const factor = (region==='all'?1:region==='North'?1.1:region==='South'?.85:region==='East'?.95:.78)
+               * (cat==='all'?1:cat==='Electronics'?1.2:cat==='Apparel'?.9:cat==='Home'?.7:.65);
+  const slicedMonths = DEMO.months.slice(-months);
+  const slicedRev = DEMO.revenue.slice(-months).map(v=>Math.round(v*factor));
+  const slicedTarget = DEMO.target.slice(-months);
+  trendChart.data.labels = slicedMonths;
+  trendChart.data.datasets[0].data = slicedRev;
+  trendChart.data.datasets[1].data = slicedTarget;
+  trendChart.update();
+  const total = slicedRev.reduce((a,b)=>a+b,0);
+  document.getElementById('kpiRevenue').textContent = '$'+(total/1000).toFixed(2)+'M';
+  document.getElementById('kpiOrders').textContent = Math.round(18420*(months/12)*factor).toLocaleString();
+  document.getElementById('kpiAOV').textContent = '$'+Math.round(154*(factor>.9?factor*.97:factor));
+  const rLabel = region==='all'?'All Regions':region;
+  const cLabel = cat==='all'?'All Categories':cat;
+  document.getElementById('dateRange').textContent = `Last ${months} months · ${rLabel} · ${cLabel}`;
+}
+
+function toggleChartType() {
+  const type = document.getElementById('chartType').value;
+  trendChart.config.type = type;
+  trendChart.update();
+}
+
+function handleCSV(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  Papa.parse(file, {
+    header: true, skipEmptyLines: true,
+    complete: function(results) {
+      const rows = results.data;
+      try {
+        const months = rows.map(r => r.month || r.Month || r.MONTH || '');
+        const revenue = rows.map(r => parseFloat(r.revenue || r.Revenue || r.REVENUE || 0));
+        if (months.length && revenue.some(v=>v>0)) {
+          trendChart.data.labels = months;
+          trendChart.data.datasets[0].data = revenue;
+          trendChart.data.datasets[1].data = revenue.map(v => Math.round(v * 1.05));
+          trendChart.update();
+          const total = revenue.reduce((a,b)=>a+b,0);
+          document.getElementById('kpiRevenue').textContent = '$'+(total/1000).toFixed(2)+'M';
+          document.getElementById('uploadBadge').textContent = file.name+' loaded';
+          document.getElementById('uploadBadge').className = 'badge badge-green';
+          showToast('✅ CSV imported — '+rows.length+' rows loaded');
+        } else { showToast('⚠️ CSV needs a "month" and "revenue" column'); }
+      } catch(err) { showToast('❌ Could not parse CSV'); }
+    }
+  });
+}
+
+function exportCSV() {
+  const months = trendChart.data.labels;
+  const revenue = trendChart.data.datasets[0].data;
+  const rows = ['month,revenue($K)'].concat(months.map((m,i)=>`${m},${revenue[i]}`));
+  const blob = new Blob([rows.join('\n')], {type:'text/csv'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'sales_data.csv'; a.click();
+  showToast('📥 CSV exported');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 2800);
+}
+
+initCharts();
+</script>
+</body>
+</html>
